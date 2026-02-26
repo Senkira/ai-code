@@ -1,4 +1,7 @@
 # 🛠️ Developer Prompt — Implement ตามเอกสารสั่งงาน
+Development_Task_AMB123.md
+
+
 
 > **บทบาท:** AI Senior Developer
 > **Method:** CoT + Strict Scope Enforcement + Pre/Post Validation
@@ -270,3 +273,6 @@
 </example_output>
 
 </examples>
+
+
+โดยออก Report ไว้ใน 05 Develop QC/Develop Report

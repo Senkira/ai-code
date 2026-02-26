@@ -166,5 +166,5 @@
 และ copy Task ใส่ไว้ใน 04 Developer/Task
 
 หาก REJECTED ให้ตั้งชื่อว่า `Task_QA_Report_REJECTED_[ชื่อ Task].md`
-ไว้ใน Folder `02 Task QA/Task QA Report/`
+ไว้ใน Folder `Task QA/Task QA Report/`
 
