@@ -1,0 +1,8 @@
+# Exclude OMNICHANNEL_API folder
+OMNICHANNEL_API/
+
+# Common files to ignore
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

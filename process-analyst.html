@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Analyst Workflow | AI-Integrated Cyber Edition</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00f5ff;
+            --neon-purple: #bc13fe;
+            --neon-blue: #0066ff;
+            --neon-pink: #ff006e;
+            --dark-bg: #0a0a0f;
+            --card-bg: rgba(20, 20, 35, 0.85);
+        }
+
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background: var(--dark-bg);
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: none;
+        }
+
+        /* Laser Pointer Cursor */
+        .laser-cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 0, 0, 0.9) 0%, rgba(255, 0, 0, 0.6) 40%, transparent 70%);
+            box-shadow: 
+                0 0 10px rgba(255, 0, 0, 0.8),
+                0 0 20px rgba(255, 0, 0, 0.6),
+                0 0 30px rgba(255, 0, 0, 0.4),
+                0 0 40px rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            z-index: 99999;
+            transform: translate(-50%, -50%);
+            transition: width 0.15s, height 0.15s;
+        }
+
+        .laser-cursor.clicking {
+            width: 15px;
+            height: 15px;
+            background: radial-gradient(circle, rgba(0, 245, 255, 0.9) 0%, rgba(0, 245, 255, 0.6) 40%, transparent 70%);
+            box-shadow: 
+                0 0 10px rgba(0, 245, 255, 0.8),
+                0 0 20px rgba(0, 245, 255, 0.6),
+                0 0 30px rgba(0, 245, 255, 0.4);
+        }
+
+        /* Laser Trail Effect */
+        .laser-trail {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 99998;
+            animation: trail-fade 0.5s ease-out forwards;
+        }
+
+        @keyframes trail-fade {
+            0% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+        }
+
+        a, button, .sh, .pbtn, input, textarea, select {
+            cursor: none;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(0, 102, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(188, 19, 254, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(0, 245, 255, 0.05) 0%, transparent 70%);
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            animation: float 15s infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+            animation: pulse-line 2s infinite;
+        }
+
+        @keyframes pulse-line {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 245, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 2rem;
+        }
+
+        .badge::before {
+            content: '◉';
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .grad {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 650px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.7;
+        }
+
+        .stats {
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .stat-n {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-l {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Section Styles */
+        .tools {
+            padding: 5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sec-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--neon-cyan);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .sec-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sec-desc {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            max-width: 600px;
+            margin-bottom: 3rem;
+        }
+
+        /* Tools Grid */
+        .tgrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .tcard {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .tcard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .tcard:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+        }
+
+        .tcard:hover::before {
+            transform: scaleX(1);
+        }
+
+        .tcard-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .tcard:nth-child(1) .tcard-icon {
+            background: linear-gradient(135deg, var(--neon-purple), #a855f7);
+        }
+
+        .tcard:nth-child(2) .tcard-icon {
+            background: linear-gradient(135deg, var(--neon-cyan), #06b6d4);
+        }
+
+        .tcard:nth-child(3) .tcard-icon {
+            background: linear-gradient(135deg, var(--neon-pink), #ec4899);
+        }
+
+        .tcard h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            color: var(--neon-cyan);
+        }
+
+        .tcard p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 1.5rem;
+        }
+
+        .tag {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(0, 245, 255, 0.1);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Navigation */
+        .pnav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            padding: 0.5rem;
+        }
+
+        .pnav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .pbtn {
+            padding: 1rem 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .pbtn:hover {
+            color: #fff;
+        }
+
+        .pbtn.on {
+            color: var(--neon-cyan);
+            border-bottom-color: var(--neon-cyan);
+        }
+
+        /* Timeline */
+        .tl {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        .pg {
+            margin-bottom: 4rem;
+            scroll-margin-top: 80px;
+        }
+
+        .ph {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .ph-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--neon-cyan);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .ph-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .ph-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        /* Step Cards */
+        .sc {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .sc:hover {
+            border-color: rgba(0, 245, 255, 0.3);
+        }
+
+        .sc.open {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.1);
+        }
+
+        .sh {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .sh:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .sn {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.3);
+        }
+
+        .si {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .si-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .si-sub {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .pills {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .pill {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .pill-i {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .pill-o {
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .chev {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .sc.open .chev {
+            transform: rotate(180deg);
+            background: rgba(0, 245, 255, 0.1);
+        }
+
+        .chev svg {
+            width: 16px;
+            height: 16px;
+            stroke: rgba(255, 255, 255, 0.5);
+            transition: stroke 0.3s;
+        }
+
+        .sc.open .chev svg {
+            stroke: var(--neon-cyan);
+        }
+
+        .sb {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .sc.open .sb {
+            max-height: 4000px;
+        }
+
+        .sbi {
+            padding: 0 2rem 2rem;
+        }
+
+        .sdiv {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Pain Points */
+        .pain {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pain-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+
+        .pain-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pain-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.03);
+            border-radius: 10px;
+            border-left: 3px solid rgba(239, 68, 68, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .pain-list li:hover {
+            background: rgba(239, 68, 68, 0.08);
+            border-left-color: #ef4444;
+        }
+
+        .pain-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .pain-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Input/Output */
+        .iog {
+            display: grid;
+            grid-template-columns: 1fr 50px 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .io-t {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .io-t-i { color: #f59e0b; }
+        .io-t-o { color: #22c55e; }
+
+        .io-r {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.5;
+        }
+
+        .io-r .ic {
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            margin-top: 3px;
+        }
+
+        .io-r.hl {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .io-arr {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 2rem;
+            color: var(--neon-cyan);
+            font-size: 1.5rem;
+            animation: pulse-arrow 2s infinite;
+        }
+
+        @keyframes pulse-arrow {
+            0%, 100% { opacity: 0.5; transform: translateX(0); }
+            50% { opacity: 1; transform: translateX(5px); }
+        }
+
+        /* AI Integration */
+        .ai {
+            background: linear-gradient(135deg, rgba(0, 102, 255, 0.08), rgba(188, 19, 254, 0.05));
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+        }
+
+        .ai-t {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--neon-cyan);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-t::before {
+            content: '◉';
+            animation: blink 1s infinite;
+        }
+
+        .ai-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ai-row:last-child {
+            border-bottom: none;
+        }
+
+        .abadge {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .b-nb {
+            background: rgba(188, 19, 254, 0.15);
+            color: var(--neon-purple);
+            border: 1px solid rgba(188, 19, 254, 0.3);
+        }
+
+        .b-gc {
+            background: rgba(0, 245, 255, 0.15);
+            color: var(--neon-cyan);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+        }
+
+        .b-gl {
+            background: rgba(255, 0, 110, 0.15);
+            color: var(--neon-pink);
+            border: 1px solid rgba(255, 0, 110, 0.3);
+        }
+
+        .ai-desc {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.7;
+        }
+
+        /* Prompt Chain Styling */
+        .prompt-chain {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+        }
+
+        .prompt-item {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .prompt-arrow {
+            color: var(--neon-cyan);
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .tsaved {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            padding: 10px 18px;
+            border-radius: 20px;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            flex-wrap: wrap;
+        }
+
+        .tsaved-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tsaved-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tsaved-value {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .tsaved-arrow {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .tsaved-percent {
+            color: #f59e0b;
+            font-weight: 700;
+            background: rgba(245, 158, 11, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        /* Solve Section */
+        .solve {
+            background: rgba(34, 197, 94, 0.05);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .solve-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #22c55e;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .solve-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .solve-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.6;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+            background: rgba(34, 197, 94, 0.04);
+            border-radius: 10px;
+            border-left: 3px solid rgba(34, 197, 94, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .solve-list li:hover {
+            background: rgba(34, 197, 94, 0.1);
+            border-left-color: #22c55e;
+            transform: translateX(4px);
+        }
+
+        .solve-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .solve-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.15);
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .solve-highlight {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        /* Summary */
+        .summary {
+            padding: 5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sgrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .scard {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .scard:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 245, 255, 0.1);
+        }
+
+        .sv {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .sl {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Flow */
+        .flow {
+            padding: 5rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .fv {
+            display: flex;
+            flex-direction: column;
+            margin-top: 3rem;
+        }
+
+        .fi {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .fl-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50px;
+            flex-shrink: 0;
+        }
+
+        .fl-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 3px solid;
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .fl-line {
+            width: 2px;
+            flex: 1;
+            min-height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .fc {
+            padding-bottom: 2.5rem;
+            flex: 1;
+        }
+
+        .fc h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .fc p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 4rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+        }
+
+        .footer span {
+            color: var(--neon-cyan);
+        }
+
+        /* Responsive */
+        @media(max-width: 768px) {
+            .iog {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .io-arr {
+                transform: rotate(90deg);
+                padding: 0;
+            }
+
+            .stats { gap: 2rem; }
+
+            .sh {
+                flex-wrap: wrap;
+                padding: 1.2rem;
+            }
+
+            .pills { display: none; }
+
+            .sbi { padding: 0 1.2rem 1.5rem; }
+        }
+
+        .rv {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .rv.vis {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background -->
+    <div class="bg-animation"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="badge">Process Analyst Workflow 2026</div>
+        <h1>Process Analyst<br><span class="grad">Workflow + AI</span></h1>
+        <p>กระบวนการทำงานของ Process Analyst ตั้งแต่รับ Scope จนส่งมอบ Process Documentation โดยมี AI ช่วยทุกขั้นตอน</p>
+
+        <div class="stats">
+            <div>
+                <div class="stat-n">7</div>
+                <div class="stat-l">Steps</div>
+            </div>
+            <div>
+                <div class="stat-n">3</div>
+                <div class="stat-l">AI Tools</div>
+            </div>
+            <div>
+                <div class="stat-n">70-85%</div>
+                <div class="stat-l">Time Saved</div>
+            </div>
+            <div>
+                <div class="stat-n">100%</div>
+                <div class="stat-l">Traceability</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="tools rv" id="tools">
+        <div class="sec-label">AI Tools Stack</div>
+        <div class="sec-title">เครื่องมือ AI ที่ใช้</div>
+        <div class="sec-desc">3 เครื่องมือหลักสำหรับ Process Analyst</div>
+
+        <div class="tgrid">
+            <div class="tcard">
+                <div class="tcard-icon">🧠</div>
+                <h3>Google NotebookLM</h3>
+                <p>คลังความรู้โปรเจค — อัปโหลด audio ประชุม + เอกสาร สร้าง MOM, สรุป Scope, Cross-reference ข้อมูลจากทุก Step อัตโนมัติ</p>
+                <div class="tags">
+                    <span class="tag">Step 1–7</span>
+                    <span class="tag">Transcribe</span>
+                    <span class="tag">MOM</span>
+                    <span class="tag">Cross-ref</span>
+                </div>
+            </div>
+
+            <div class="tcard">
+                <div class="tcard-icon">⚡</div>
+                <h3>Gemini Code Assist</h3>
+                <p>ตัวช่วยวิเคราะห์ Code & สร้างเอกสาร — ใช้ AI Role อ่าน Codebase เดิม ค้นหา Repos ที่เกี่ยวข้อง วิเคราะห์ความเชื่อมโยง Scope กับ Service เดิม</p>
+                <div class="tags">
+                    <span class="tag">Step 1–7</span>
+                    <span class="tag">Repos Finder</span>
+                    <span class="tag">Service Mapping</span>
+                    <span class="tag">BRD</span>
+                    <span class="tag">Gap Analysis</span>
+                </div>
+            </div>
+
+            <div class="tcard">
+                <div class="tcard-icon">📊</div>
+                <h3>Diagram Tools + AI</h3>
+                <p>สร้าง Diagram อัตโนมัติ — ใช้ AI ช่วยสร้าง Process Flow, Swimlane, Application Diagram จาก text description</p>
+                <div class="tags">
+                    <span class="tag">Step 5–7</span>
+                    <span class="tag">Flowchart</span>
+                    <span class="tag">Swimlane</span>
+                    <span class="tag">Architecture</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation -->
+    <nav class="pnav">
+        <button class="pbtn on" data-t="p-scope">Scope & Kickoff (1-2)</button>
+        <button class="pbtn" data-t="p-req">Requirements (3-4)</button>
+        <button class="pbtn" data-t="p-analysis">Analysis & Design (5-6)</button>
+        <button class="pbtn" data-t="p-deliver">Deliver & Handoff (7)</button>
+    </nav>
+
+    <!-- Timeline -->
+    <section class="tl" id="timeline"></section>
+
+    <!-- Summary -->
+    <section class="summary rv">
+        <div class="sec-label">Expected Results</div>
+        <div class="sec-title">ผลลัพธ์ที่คาดหวัง</div>
+
+        <div class="sgrid">
+            <div class="scard">
+                <div class="sv" style="color:var(--neon-cyan)">70%</div>
+                <div class="sl">Documentation Time Saved</div>
+            </div>
+            <div class="scard">
+                <div class="sv" style="color:#22c55e">85%</div>
+                <div class="sl">MOM Accuracy</div>
+            </div>
+            <div class="scard">
+                <div class="sv" style="color:var(--neon-purple)">100%</div>
+                <div class="sl">Requirement Traceability</div>
+            </div>
+            <div class="scard">
+                <div class="sv" style="color:#f59e0b">3x</div>
+                <div class="sl">Faster Gap Analysis</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Flow -->
+    <section class="flow rv">
+        <div class="sec-label">Tool Pipeline</div>
+        <div class="sec-title">AI Tools ทำงานร่วมกันอย่างไร</div>
+
+        <div class="fv">
+            <div class="fi">
+                <div class="fl-col">
+                    <div class="fl-dot" style="border-color:var(--neon-purple);background:var(--neon-purple);box-shadow:0 0 20px var(--neon-purple)"></div>
+                    <div class="fl-line"></div>
+                </div>
+                <div class="fc">
+                    <h4 style="color:var(--neon-purple)">Layer 1 — NotebookLM คลังความรู้ (Step 1-7)</h4>
+                    <p>อัปโหลดเสียงประชุม + เอกสารทั้งหมด สร้าง MOM อัตโนมัติ Cross-reference ข้อมูลจากทุก Step สะสมเป็น Knowledge Base</p>
+                </div>
+            </div>
+
+            <div class="fi">
+                <div class="fl-col">
+                    <div class="fl-dot" style="border-color:var(--neon-cyan);background:var(--neon-cyan);box-shadow:0 0 20px var(--neon-cyan)"></div>
+                    <div class="fl-line"></div>
+                </div>
+                <div class="fc">
+                    <h4 style="color:var(--neon-cyan)">Layer 2 — Gemini Code Assist ตัววิเคราะห์ (Step 1-7)</h4>
+                    <p>ใช้ AI Role ค้นหา Repos ที่เกี่ยวข้อง อ่าน Codebase เดิม สรุปความเชื่อมโยง Scope กับ Service พร้อมสร้าง BRD, Gap Analysis อัตโนมัติ</p>
+                </div>
+            </div>
+
+            <div class="fi">
+                <div class="fl-col">
+                    <div class="fl-dot" style="border-color:var(--neon-pink);background:var(--neon-pink);box-shadow:0 0 20px var(--neon-pink)"></div>
+                    <div class="fl-line" style="background:transparent"></div>
+                </div>
+                <div class="fc">
+                    <h4 style="color:var(--neon-pink)">Layer 3 — Diagram Tools + AI (Step 5-7)</h4>
+                    <p>สร้าง Process Flow, Swimlane Diagram, Application Architecture จาก text description อัตโนมัติ ลดเวลาวาด diagram จากชั่วโมงเหลือนาที</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>EASY BUY PCL — Process Analyst Workflow 2026</p>
+        <p style="margin-top:10px"><span>🦞</span> | Cyber-Future Edition</p>
+    </div>
+
+    <script>
+        // Particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // Data for all steps
+        const D = [{
+            phase: "p-scope", pl: "Phase 01", pt: "Scope & Kickoff",
+            steps: [
+                {
+                    n: 1,
+                    nm: "Get Scope & Objective",
+                    sub: "รับ Scope และวัตถุประสงค์จาก Stakeholder",
+                    c: "#00f5ff",
+                    pn: [
+                        "จดบันทึกประชุมไม่ครบ ตกหล่นประเด็นสำคัญ — เมื่อประชุมหลายชั่วโมง คนจด MOM อาจพลาด requirement สำคัญ หรือ business rule ที่ stakeholder พูดเร็วๆ ทำให้ต้องกลับไปถามซ้ำ",
+                        "Action Items ไม่ชัดเจน — ไม่มีการระบุผู้รับผิดชอบและ deadline ทำให้ task ค้างคาใครควรทำอะไร ส่งผลให้ขั้นตอนถัดไปล่าช้า",
+                        "ความเข้าใจไม่ตรงกันระหว่าง Stakeholder — แต่ละฝ่ายเข้าใจ scope คนละแบบ แต่ไม่มีเอกสารมายืนยัน ส่งผลให้ต้องแก้ไขในภายหลัง",
+                        "Scope Creep — ไม่มีการกำหนด boundary ที่ชัดเจน ทำให้ขอบเขตงานขยายออกไปเรื่อยๆ โดยไม่มีใครคุมได้",
+                        "ไม่มี Single Source of Truth — ข้อมูล scope กระจัดกระจายอยู่ในหลาย email, chat, เอกสาร ไม่มีที่รวมศูนย์ที่ทุกคนเห็นตรงกัน",
+                        "ไม่รู้ว่า Scope กระทบ Service เดิมตัวไหนบ้าง — ไม่มีใครรู้ภาพรวม Codebase ทั้งหมด ต้องถาม Dev หลายคนว่า Service ไหนเกี่ยว ทำให้เสียเวลาและอาจพลาด Service ที่เกี่ยวข้อง"
+                    ],
+                    i: ["Project Charter", "Business Requirement (Draft)", "Voice Recording ประชุม Get Scope", "Existing Codebase / Git Repos"],
+                    o: ["MOM Get Scope", "Summary Scope & Objective", "Stakeholder Map", "Scope-Service Relationship Map"],
+                    a: [
+                        ["nb", ["สร้าง MOM จากเสียงประชุม พร้อมสรุปประเด็นสำคัญและ Action Items", "สร้าง Summary Scope ระบุขอบเขต Deliverables และ Out of Scope", "สร้าง Stakeholder Map ระบุบทบาทแต่ละฝ่าย"]],
+                        ["gc", ["🔍 AI Role: Repos Finder Assistant — ค้นหา Repos ที่เกี่ยวข้องกับ Scope จาก Codebase ทั้งหมด", "📖 AI Role: Service Impact Analyst — อ่าน Code จาก Repos ที่พบ สรุปความเชื่อมโยงว่า Scope กระทบ Service เดิมตัวไหน อย่างไร", "สร้าง Scope-Service Relationship Map ระบุว่าแต่ละ Service เกี่ยวข้องกับ Scope ข้อไหน"]]
+                    ],
+                    sol: [
+                        "ช่วย Transcribe เสียงประชุมให้ครอบคลุมมากขึ้น — ลดโอกาสตกหล่นประเด็นสำคัญ แม้ประชุมจะยาวหลายชั่วโมง (ยังต้อง review ความถูกต้อง)",
+                        "ช่วยสรุป Action Items พร้อมผู้รับผิดชอบ — ลด effort ในการจดบันทึก แต่ยังต้องตรวจสอบและยืนยันกับทีม",
+                        "ช่วยสร้าง Summary Scope เป็นจุดอ้างอิงกลาง — ลดโอกาสเข้าใจผิดระหว่างฝ่าย เพราะอ้างอิงจากเสียงประชุมจริง",
+                        "ช่วยระบุ In-Scope / Out-of-Scope เบื้องต้น — เป็น draft ให้ Analyst review และลดความเสี่ยง Scope Creep",
+                        "รวมข้อมูลไว้ที่เดียว ช่วยค้นหาได้สะดวกขึ้น — ลดเวลาค้นหลาย email หรือ chat แต่ยังต้องตรวจสอบความถูกต้อง"
+                    ],
+                    solGc: [
+                        "🔍 Repos Finder Assistant — ช่วยค้นหา Repos ที่น่าจะเกี่ยวข้องกับ Scope จาก Codebase ทั้งหมด ลดเวลาที่ต้องถาม Dev ทีละคน (ยังต้อง verify กับทีม Dev)",
+                        "📖 Service Impact Analyst — ช่วยอ่าน Code จาก Repos ที่พบ สรุปเป็น draft ว่า Scope มีความสัมพันธ์กับ Service เดิมอย่างไร (Analyst ต้อง review ร่วมกับ Dev)",
+                        "ช่วยสร้าง Scope-Service Relationship Map เบื้องต้น — ระบุว่า Service ไหนอาจได้รับผลกระทบจาก Scope ใหม่ เป็น draft ให้ทีมพิจารณา",
+                        "ลดเวลาทำความเข้าใจ Codebase เดิม — จากต้องเปิด code หลาย repos ด้วยตนเอง ให้ AI ช่วยสรุปภาพรวมเบื้องต้น (ยังต้อง verify ความถูกต้อง)"
+                    ],
+                    sv: { b: "40 ชม.", a: "6 ชม.", p: "85%" }
+                },
+                {
+                    n: 2,
+                    nm: "Kick Off with Team",
+                    sub: "ประชุมเริ่มต้นโปรเจคกับทีม",
+                    c: "#00f5ff",
+                    pn: [
+                        "เตรียม Slide ประชุม Kick-off นาน — ต้องรวบรวมข้อมูลจากหลายแหล่ง สร้าง presentation สำหรับทีม ใช้เวลาหลายชั่วโมง",
+                        "ทีมไม่เข้าใจ Scope เท่ากัน — สมาชิกแต่ละคน (Dev, QA, BA) ตีความ requirement แตกต่างกัน ส่งผลให้ทำงานไปคนละทิศ",
+                        "คำถามสำคัญในที่ประชุมไม่ถูกบันทึก — ข้อสงสัยและคำถามหายไป ไม่มีการติดตามว่าได้คำตอบหรือไม่",
+                        "Role & Responsibility ไม่ชัดเจน — ไม่มีการกำหนดว่าใครทำอะไร ส่งผลให้งานทับซ้อนหรือตกหล่น",
+                        "Timeline ไม่ Realistic — กำหนด timeline โดยไม่ได้ปรึกษาทีม ทำให้ทีมรู้สึกกดดันและ timeline เลื่อนตั้งแต่ต้น"
+                    ],
+                    i: ["MOM Get Scope", "Summary Scope & Objective", "Voice Recording ประชุม Kick-off"],
+                    o: ["MOM Kick-off", "Kick-off Presentation", "RACI Matrix"],
+                    a: [["nb", ["สร้าง Kick-off Presentation จาก Scope Summary", "สร้าง MOM ประชุม Kick-off พร้อม Q&A และ Action Items", "สร้าง RACI Matrix กำหนดบทบาทหน้าที่ของแต่ละคน"]]],
+                    sol: [
+                        "ช่วยสร้าง Kick-off Presentation จาก Scope Summary ได้เร็วขึ้นมาก — ลดเวลาจากหลายชั่วโมงเหลือไม่กี่นาที (ยังต้อง review เนื้อหา)",
+                        "ทีมสามารถถาม NotebookLM เกี่ยวกับ Scope ได้ — ช่วยให้ได้คำตอบที่อ้างอิงจากเอกสารจริง ลดการตีความคนละแบบ",
+                        "ช่วย Transcribe คำถามและคำตอบในประชุม — ลดโอกาสที่ข้อสงสัยสำคัญจะหลุดหายไป",
+                        "ช่วย Draft RACI Matrix จากข้อมูลประชุม — เป็น draft เบื้องต้นให้ Analyst review และปรับแก้",
+                        "ช่วย Cross-reference ข้อมูล Scope กับ resource — เป็น input เบื้องต้นให้ทีมประเมิน Timeline ที่ realistic ขึ้น"
+                    ],
+                    sv: { b: "26 ชม.", a: "4 ชม.", p: "85%" }
+                }
+            ]
+        }, {
+            phase: "p-req", pl: "Phase 02", pt: "Requirements Gathering",
+            steps: [
+                {
+                    n: 3,
+                    nm: "Get Requirement #1",
+                    sub: "รวบรวม Requirement รอบแรก — As-Is Process",
+                    c: "#f59e0b",
+                    pn: [
+                        "Requirement ไม่ครบ — ผู้ใช้งานบางคนไม่ได้เข้าประชุม หรือพูดถึง edge case สำคัญแต่ไม่มีใครจด ทำให้ต้องกลับมาเก็บซ้ำ",
+                        "User/Analyst เข้าใจไม่ตรงกัน — ภาษาของ business user กับ analyst แตกต่างกัน ตีความ process เดียวกันไม่เหมือนกัน",
+                        "As-Is Process ไม่ถูกบันทึกเป็นระบบ — กระบวนการทำงานปัจจุบันอยู่ในหัวของผู้ใช้งาน ไม่เคยถูก document ทำให้ยากต่อการวิเคราะห์",
+                        "ไม่สามารถแยก Pain Points จาก Wishes ได้ — ผู้ใช้เล่าปัญหาปนกับสิ่งที่อยากได้ ทำให้จัด priority ยาก",
+                        "เอกสารที่จัดทำไม่สอดคล้องกัน — MOM, Prototype, และ Pre-Requirement Document ไม่เชื่อมโยงกัน ตรวจสอบความถูกต้องยาก"
+                    ],
+                    i: ["MOM Get Scope", "Summary Scope & Objective", "Voice Recording ประชุม Get Req#1"],
+                    o: ["MOM Get Requirement#1", "As-Is Process Document", "Pre Requirement Document", "Pain Points & Gap List"],
+                    a: [["nb", ["สร้าง MOM จากประชุมเก็บ Requirement", "สร้าง As-Is Process Document จากคำอธิบายผู้ใช้งาน", "สร้าง Pre-Requirement Document สรุป Functional/Non-functional", "สร้าง Pain Points & Gap List จัด priority"]]],
+                    sol: [
+                        "ช่วย Transcribe คำพูดในประชุม — เพิ่มโอกาสจับ edge case ที่ผู้ใช้พูดผ่านๆ ลดจำนวนรอบที่ต้องกลับไปเก็บ requirement ซ้ำ",
+                        "ช่วยสรุปให้ภาษา Business กับ Technical ใกล้เคียงกันมากขึ้น — ลดช่องว่างความเข้าใจระหว่าง user และ analyst",
+                        "ช่วย Draft As-Is Process Document จากคำอธิบายในเสียงประชุม — เป็นจุดเริ่มต้นให้ Analyst ปรับแก้ แม้ไม่เคย document มาก่อน",
+                        "ช่วยจัดหมวด Pain Points แยกจาก Wishes เบื้องต้น — ให้ Analyst ใช้เป็น draft ในการจัด priority",
+                        "ช่วย Cross-reference เอกสารหลายฉบับ — ลดเวลาตรวจสอบความสอดคล้องด้วยตนเอง แต่ยังต้อง verify ผลลัพธ์"
+                    ],
+                    sv: { b: "40 ชม.", a: "8 ชม.", p: "80%" }
+                },
+                {
+                    n: 4,
+                    nm: "Get Requirement #2",
+                    sub: "รวบรวม Requirement รอบ 2 — To-Be Process + Wireframe",
+                    c: "#f59e0b",
+                    pn: [
+                        "Requirement เปลี่ยนบ่อย — ผู้ใช้เห็น wireframe แล้วอยากเพิ่ม/แก้ไข feature ทำให้ต้องปรับเอกสารหลายรอบ เปลืองเวลา",
+                        "Wireframe ไม่ sync กับ Requirement — wireframe อัปเดตแล้วแต่เอกสารไม่ update หรือกลับกัน สับสนว่าอันไหนเป็น version ล่าสุด",
+                        "User Story ไม่ครบ Acceptance Criteria — เขียนว่าผู้ใช้ต้องการอะไร แต่ไม่ระบุว่าสำเร็จเมื่อไหร่ ทำให้ QA ไม่รู้ว่าจะ test อย่างไร",
+                        "Feedback จากรอบแรกไม่ถูกนำมาปรับปรุง — requirement ที่ได้รับ feedback แล้วไม่มีการ trace ว่าแก้ไขแล้วหรือไม่",
+                        "To-Be Process ไม่สอดคล้องกับ Pain Points — ออกแบบ process ใหม่แต่ไม่ได้แก้ปัญหาที่ระบุไว้ใน Gap Analysis",
+                        "ไม่มี Traceability Matrix — ไม่สามารถ trace ได้ว่า requirement ข้อไหนมาจากการประชุมครั้งไหน"
+                    ],
+                    i: ["Pre Requirement Document", "MOM Get Requirement#1", "Pain Points & Gap List", "Voice Recording ประชุม Get Req#2"],
+                    o: ["MOM Get Requirement#2", "User Stories (with Acceptance Criteria)", "To-Be Process Document", "Wireframe Description"],
+                    a: [["nb", ["สร้าง MOM ประชุมรอบ 2 พร้อมติดตาม Feedback รอบแรก", "สร้าง User Stories ครบ Acceptance Criteria", "สร้าง To-Be Process Document ที่ตอบ Pain Points", "สร้าง Wireframe Description สำหรับ Designer"]]],
+                    sol: [
+                        "ช่วย Track Feedback จากรอบแรก — เปรียบเทียบ requirement เดิมกับใหม่ ชี้ให้เห็นว่าอะไรเปลี่ยน อะไรยังค้างอยู่",
+                        "ช่วย Cross-check Wireframe กับ Requirement — ลดเวลาตรวจสอบด้วยตนเอง แต่ Analyst ยังต้อง verify",
+                        "ช่วย Draft User Stories พร้อม Acceptance Criteria — อ้างอิงจากเสียงประชุม ลดโอกาสขาด criteria สำคัญ",
+                        "ช่วยตรวจสอบว่า Feedback รอบแรกถูกนำมาปรับปรุงแล้วหรือยัง — ลดโอกาส requirement ตกหล่น",
+                        "ช่วยเปรียบเทียบ To-Be Process กับ Pain Points — ตรวจเบื้องต้นว่า process ใหม่ตอบโจทย์ปัญหาที่ระบุไว้หรือไม่",
+                        "ช่วยสร้าง Traceability เบื้องต้น — ชี้ให้เห็นว่า requirement ข้อไหนน่าจะมาจากประชุมครั้งไหน ใครพูดถึง"
+                    ],
+                    sv: { b: "32 ชม.", a: "8 ชม.", p: "75%" }
+                }
+            ]
+        }, {
+            phase: "p-analysis", pl: "Phase 03", pt: "Analysis & Design",
+            steps: [
+                {
+                    n: 5,
+                    nm: "Process Analysis & Gap Assessment",
+                    sub: "วิเคราะห์กระบวนการและประเมิน Gap อย่างละเอียด",
+                    c: "#bc13fe",
+                    pn: [
+                        "Gap Analysis ไม่ครบถ้วน — วิเคราะห์แค่ปัญหาที่เห็นชัดเจน ไม่ได้ dig deep ถึง root cause ทำให้ solution แก้ได้แค่อาการ",
+                        "Process Mapping ใช้เวลานาน — การวาด swimlane diagram หรือ process flow ต้องทำด้วยมือ ใช้เวลาหลายวัน",
+                        "ไม่มี Impact Analysis — ไม่ได้ประเมินว่าการเปลี่ยน process จะกระทบส่วนไหนบ้าง ส่งผลให้เกิดปัญหาไม่คาดคิด",
+                        "Dependency ไม่ชัดเจน — ไม่ระบุว่ากระบวนการไหนต้องทำก่อนหลัง หรือกระทบกันอย่างไร",
+                        "ไม่มี Metrics วัดผล — ไม่กำหนด KPI หรือ baseline metric ทำให้ไม่สามารถวัดได้ว่า process ใหม่ดีขึ้นจริงหรือไม่"
+                    ],
+                    i: ["As-Is Process Document", "To-Be Process Document", "Pain Points & Gap List", "User Stories"],
+                    o: ["Gap Analysis Report", "Process Flow Diagram (As-Is vs To-Be)", "Impact Analysis", "Process KPIs & Metrics"],
+                    a: [["nb", ["สร้าง Gap Analysis Report เปรียบเทียบ As-Is vs To-Be", "สร้าง Process Flow Diagram อัตโนมัติจาก text", "สร้าง Impact Analysis ระบุ dependency และผลกระทบ", "กำหนด KPIs และ Baseline Metrics"]]],
+                    sol: [
+                        "ช่วยวิเคราะห์ Root Cause ได้ลึกขึ้น — cross-reference ข้อมูลจากหลายประชุม เพิ่มมุมมองที่อาจมองข้าม (Analyst ยังต้องตัดสินใจเอง)",
+                        "ช่วย Draft Process Flow จาก text description ได้เร็วขึ้น — ลดเวลาจากหลายวันเหลือเป็นชั่วโมง (ยังต้อง review ความถูกต้อง)",
+                        "ช่วย Draft Impact Analysis เบื้องต้น — ชี้ให้เห็น dependency ระหว่าง process ที่อาจกระทบ ให้ Analyst พิจารณาต่อ",
+                        "ช่วย Cross-reference ข้อมูลจาก Step 1-4 — ให้ Analyst เห็นภาพรวม dependency ได้ง่ายขึ้นจากข้อมูลที่สะสมมา",
+                        "ช่วยเสนอ KPIs และ Baseline Metrics เบื้องต้น — เป็น draft จากข้อมูล As-Is Process ให้ Analyst ปรับให้เหมาะสม"
+                    ],
+                    sv: { b: "48 ชม.", a: "10 ชม.", p: "80%" }
+                },
+                {
+                    n: 6,
+                    nm: "Draft BRD & Test Cases",
+                    sub: "จัดทำ BRD ฉบับร่าง และ Draft Test Cases",
+                    c: "#bc13fe",
+                    pn: [
+                        "BRD เขียนไม่ทัน — ต้องรวบรวมข้อมูลจากหลายแหล่ง เขียน BRD ที่สมบูรณ์ใช้เวลามาก",
+                        "Test Case เขียนไม่ทัน — ต้องรอ requirement finalize จึงเริ่มเขียน test case ได้ ทำให้ช่วงเวลาก่อน develop อัดแน่น",
+                        "BRD ไม่นิ่ง — แก้ไขตลอดเวลาจนถึงวินาทีสุดท้าย ทำให้ version control สับสน ไม่รู้ว่าอันไหนเป็น final",
+                        "Diagram ไม่สอดคล้องกับเอกสาร — Application Diagram หรือ Infra Diagram วาดจากความเข้าใจที่ไม่ตรงกับ BRD",
+                        "Cross-reference ระหว่างเอกสารยาก — ต้องเปิดหลายไฟล์เพื่อตรวจสอบความสอดคล้อง ใช้เวลานานและผิดพลาดได้ง่าย",
+                        "Presentation สำหรับ Steering ใช้เวลาสร้างนาน — ต้องรวบรวม diagram และ technical detail มานำเสนอ"
+                    ],
+                    i: ["Gap Analysis Report", "Process Flow Diagram", "User Stories", "All MOM Documents"],
+                    o: ["Draft BRD", "Draft Test Cases", "Application Diagram", "Infra Diagram", "Presentation Steering"],
+                    a: [["nb", ["สร้าง Draft BRD ฉบับสมบูรณ์จาก Requirement ทั้งหมด", "สร้าง Draft Test Cases จาก User Stories", "สร้าง Application Diagram และ Infra Diagram", "สร้าง Presentation สำหรับ Steering", "Cross-reference เอกสารทั้งหมดให้สอดคล้อง"]]],
+                    sol: [
+                        "ช่วยสร้าง Draft BRD จาก Requirement ทุกรอบ — รวบรวมข้อมูลจาก Step 1-5 มาเรียบเรียงเป็น draft ให้ Analyst ปรับแก้",
+                        "ช่วยสร้าง Draft Test Cases จาก User Stories ได้เร็วขึ้น — ไม่ต้องรอ requirement finalize ก็เริ่ม draft ได้ แก้ไขตามภายหลัง",
+                        "ช่วย Track การเปลี่ยนแปลงระหว่าง version — ลดความสับสนว่า version ไหนเป็น latest แต่ Analyst ยังต้องควบคุม version จริง",
+                        "ช่วย Cross-reference Diagram กับ BRD เบื้องต้น — ลดเวลาตรวจสอบด้วยตนเอง แต่ยังต้อง verify ความถูกต้อง",
+                        "ช่วยสร้าง Draft Presentation สำหรับ Steering ได้เร็วขึ้น — ดึงข้อมูลสำคัญจาก BRD มาสรุป (ยังต้อง review)",
+                        "ช่วย Cross-reference เอกสารหลายฉบับ — ลดเวลาค้นหาว่า requirement ข้อไหนยังขาดใน BRD ได้สะดวกขึ้น"
+                    ],
+                    sv: { b: "60 ชม.", a: "12 ชม.", p: "80%" }
+                }
+            ]
+        }, {
+            phase: "p-deliver", pl: "Phase 04", pt: "Deliver & Handoff",
+            steps: [
+                {
+                    n: 7,
+                    nm: "Finalize & Handoff to Dev Team",
+                    sub: "Finalize BRD, Test Plan และส่งมอบให้ทีมพัฒนา",
+                    c: "#22c55e",
+                    pn: [
+                        "BRD ไม่สมบูรณ์ตอนส่งมอบ — Dev ถามกลับมาหลายรอบเพราะเอกสารไม่ครบถ้วน ทำให้ต้องเสียเวลาอธิบายซ้ำ",
+                        "Test Plan ไม่ครอบคลุม — test case ไม่ครอบคลุม edge case หรือ negative scenario ทำให้ bug หลุดไป UAT",
+                        "Handoff ไม่ smooth — ไม่มี session ส่งมอบที่ชัดเจน ทีม Dev ต้องอ่านเอกสารเอง ตีความผิดบ่อย",
+                        "ไม่มี Traceability Report — ไม่สามารถ trace ได้ว่า requirement ข้อไหนมาจากไหน ใครอนุมัติ ส่งผลให้เกิดข้อโต้แย้ง",
+                        "Knowledge Transfer ไม่ทั่วถึง — บางคนในทีมไม่ได้เข้า session ทำให้ขาดความเข้าใจใน requirement",
+                        "Approval ล่าช้า — ผู้บริหารต้องการข้อมูลเพิ่ม หรือเอกสารไม่ครบตามที่ต้องการ ทำให้ต้องเลื่อนการอนุมัติ"
+                    ],
+                    i: ["Draft BRD", "Draft Test Cases", "All Diagrams", "Voice Recording ประชุม Steering"],
+                    o: ["Final BRD (Freeze Version)", "Final Test Cases / Test Plan", "TRD (Technical Requirement)", "Traceability Matrix", "Knowledge Transfer Session Recording"],
+                    a: [["nb", ["Finalize BRD (Freeze Version) ตาม Feedback ทุกรอบ", "สร้าง Final Test Cases / Test Plan", "สร้าง TRD (Technical Requirement Document)", "สร้าง Traceability Matrix เชื่อมโยงทุก Requirement", "สร้าง Knowledge Transfer Summary สำหรับทีม Dev"]]],
+                    sol: [
+                        "ช่วยตรวจสอบ BRD ให้ครบถ้วนมากขึ้นก่อนส่งมอบ — ลดจำนวนรอบที่ Dev ต้องถามกลับ แต่ยังอาจมีบางจุดที่ต้องอธิบายเพิ่ม",
+                        "ช่วยสร้าง Test Plan ที่ครอบคลุมมากขึ้น — ดึง edge case จากเสียงประชุมมาเป็น draft ลดโอกาสตกหล่น (ยังต้อง review)",
+                        "ช่วยสร้าง Handoff Summary — ทีม Dev สามารถถาม NotebookLM เพิ่มเติมได้ ช่วยลดช่องว่างความเข้าใจ",
+                        "ช่วยสร้าง Traceability Matrix เบื้องต้น — ลดเวลา trace ว่า requirement มาจากไหน แต่ Analyst ยังต้อง verify ความถูกต้อง",
+                        "ช่วยเป็น Knowledge Base เสริม — ทีมสามารถถามข้อมูลย้อนหลังได้สะดวกขึ้น ลดปัญหาคนไม่ได้เข้า session",
+                        "ช่วย Compile เอกสารตาม checklist — ลดเวลาเตรียมเอกสารสำหรับ Approve แต่ Analyst ยังต้องตรวจสอบก่อนส่ง"
+                    ],
+                    sv: { b: "48 ชม.", a: "10 ชม.", p: "80%" }
+                }
+            ]
+        }];
+
+        const BM = { nb: ['b-nb', 'NotebookLM'], gc: ['b-gc', 'Gemini Code Assist'], gl: ['b-gl', 'Diagram AI'] };
+
+        function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+
+        function renderStep(s) {
+            const nm = String(s.n).padStart(2, '0');
+
+            // Pain points as numbered list
+            let ph = '<ol class="pain-list">';
+            s.pn.forEach((p, idx) => {
+                ph += `<li><span class="pain-num">${idx + 1}</span>${esc(p)}</li>`;
+            });
+            ph += '</ol>';
+
+            let ih = s.i.map(x => `<div class="io-r"><span class="ic">📄</span>${esc(x)}</div>`).join('');
+            let oh = s.o.map(x => {
+                let st = x.startsWith('⭐');
+                let t = st ? `<strong>${esc(x.replace('⭐ ', ''))}</strong>` : esc(x);
+                return `<div class="io-r${st ? ' hl' : ''}"><span class="ic">${st ? '⭐' : '✅'}</span>${t}</div>`;
+            }).join('');
+
+            let ah = s.a.map(x => {
+                let [bc, bl] = BM[x[0]];
+                let prompts = x[1];
+                let promptHtml = '';
+                if (Array.isArray(prompts)) {
+                    promptHtml = `<div class="prompt-chain">${prompts.map((p, i) => `<span class="prompt-item">${esc(p)}</span>${i < prompts.length - 1 ? '<span class="prompt-arrow">→</span>' : ''}`).join('')}</div>`;
+                } else {
+                    promptHtml = `<div class="ai-desc">${esc(prompts)}</div>`;
+                }
+                return `<div class="ai-row"><span class="abadge ${bc}">${bl}</span>${promptHtml}</div>`;
+            }).join('');
+
+            let ip = esc(s.i[0]).substring(0, 22), op = esc(s.o[0].replace('⭐ ', '')).substring(0, 22);
+
+            let svHtml = '';
+            if (typeof s.sv === 'object') {
+                svHtml = `<div class="tsaved">
+                    <div class="tsaved-item"><span class="tsaved-label">เดิม:</span><span class="tsaved-value" style="color:#ef4444;text-decoration:line-through;">${esc(s.sv.b)}</span></div>
+                    <span class="tsaved-arrow">→</span>
+                    <div class="tsaved-item"><span class="tsaved-label">เหลือ:</span><span class="tsaved-value">${esc(s.sv.a)}</span></div>
+                    <span class="tsaved-arrow">|</span>
+                    <div class="tsaved-item"><span class="tsaved-label">ประหยัด:</span><span class="tsaved-percent">${esc(s.sv.p)}</span></div>
+                </div>`;
+            } else {
+                svHtml = `<div class="tsaved">⏱️ ${esc(s.sv)}</div>`;
+            }
+
+            // Solve section
+            let solHtml = '';
+            if (s.sol && s.sol.length > 0) {
+                let solItems = s.sol.map((item, idx) => `<li><span class="solve-num">${idx + 1}</span>${esc(item)}</li>`).join('');
+                solHtml = `<div class="solve">
+                    <div class="solve-title">✅ NotebookLM Solve อะไรได้บ้าง</div>
+                    <ol class="solve-list">${solItems}</ol>
+                </div>`;
+            }
+
+            // Solve GC section
+            let solGcHtml = '';
+            if (s.solGc && s.solGc.length > 0) {
+                let solGcItems = s.solGc.map((item, idx) => `<li><span class="solve-num" style="background:rgba(0,245,255,0.15);color:var(--neon-cyan);">${idx + 1}</span>${esc(item)}</li>`).join('');
+                solGcHtml = `<div class="solve" style="background:rgba(0,245,255,0.05);border-color:rgba(0,245,255,0.2);">
+                    <div class="solve-title" style="color:var(--neon-cyan);">⚡ Gemini Code Assist Solve อะไรได้บ้าง</div>
+                    <ol class="solve-list">${solGcItems}</ol>
+                </div>`;
+            }
+
+            return `<div class="sc" data-step="${s.n}">
+                <div class="sh">
+                    <div class="sn" style="background:${s.c};box-shadow:0 10px 30px ${s.c}66">${nm}</div>
+                    <div class="si">
+                        <div class="si-name">${esc(s.nm)}</div>
+                        <div class="si-sub">${esc(s.sub)}</div>
+                    </div>
+                    <div class="pills">
+                        <span class="pill pill-i">${ip}</span>
+                        <span>→</span>
+                        <span class="pill pill-o">${op}</span>
+                    </div>
+                    <div class="chev">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                </div>
+                <div class="sb">
+                    <div class="sbi">
+                        <div class="sdiv"></div>
+                        <div class="pain">
+                            <div class="pain-title">🔴 Pain Points</div>
+                            ${ph}
+                        </div>
+                        <div class="iog">
+                            <div>
+                                <div class="io-t io-t-i">📥 Input</div>
+                                ${ih}
+                            </div>
+                            <div class="io-arr">→</div>
+                            <div>
+                                <div class="io-t io-t-o">📤 Output</div>
+                                ${oh}
+                            </div>
+                        </div>
+                        <div class="ai">
+                            <div class="ai-t">🤖 AI Integration</div>
+                            ${ah}
+                            ${svHtml}
+                        </div>
+                        ${solHtml}
+                        ${solGcHtml}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        const tl = document.getElementById('timeline');
+        D.forEach(p => {
+            let h = `<div class="pg rv" id="${p.phase}">
+                <div class="ph">
+                    <span class="ph-num">${p.pl}</span>
+                    <span class="ph-title">${p.pt}</span>
+                    <span class="ph-line"></span>
+                </div>`;
+            p.steps.forEach(s => { h += renderStep(s) });
+            h += '</div>';
+            tl.insertAdjacentHTML('beforeend', h);
+        });
+
+        // Accordion
+        document.querySelectorAll('.sc').forEach(c => {
+            c.querySelector('.sh').addEventListener('click', () => {
+                let w = c.classList.contains('open');
+                c.closest('.pg').querySelectorAll('.sc').forEach(x => x.classList.remove('open'));
+                if (!w) c.classList.add('open');
+            });
+        });
+
+        // Navigation
+        document.querySelectorAll('.pbtn').forEach(b => {
+            b.addEventListener('click', () => {
+                document.querySelectorAll('.pbtn').forEach(x => x.classList.remove('on'));
+                b.classList.add('on');
+                let t = document.getElementById(b.dataset.t);
+                if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Scroll spy
+        const pgs = document.querySelectorAll('.pg'), btns = document.querySelectorAll('.pbtn');
+        const pObs = new IntersectionObserver(es => {
+            es.forEach(e => {
+                if (e.isIntersecting) {
+                    btns.forEach(b => b.classList.remove('on'));
+                    let b = document.querySelector(`[data-t="${e.target.id}"]`);
+                    if (b) b.classList.add('on');
+                }
+            });
+        }, { rootMargin: '-18% 0px -72% 0px' });
+        pgs.forEach(g => pObs.observe(g));
+
+        // Reveal animations
+        const rObs = new IntersectionObserver(es => {
+            es.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis') });
+        }, { threshold: .08 });
+        document.querySelectorAll('.rv').forEach(el => rObs.observe(el));
+
+        // Open first step
+        document.querySelector('.sc').classList.add('open');
+
+        // Laser Pointer Cursor
+        const laserCursor = document.createElement('div');
+        laserCursor.className = 'laser-cursor';
+        document.body.appendChild(laserCursor);
+
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+        let lastTrailTime = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            const now = Date.now();
+            if (now - lastTrailTime > 30) {
+                createLaserTrail(mouseX, mouseY);
+                lastTrailTime = now;
+            }
+        });
+
+        document.addEventListener('mousedown', () => { laserCursor.classList.add('clicking'); });
+        document.addEventListener('mouseup', () => { laserCursor.classList.remove('clicking'); });
+
+        function animateCursor() {
+            const dx = mouseX - cursorX;
+            const dy = mouseY - cursorY;
+            cursorX += dx * 0.15;
+            cursorY += dy * 0.15;
+            laserCursor.style.left = cursorX + 'px';
+            laserCursor.style.top = cursorY + 'px';
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        function createLaserTrail(x, y) {
+            const trail = document.createElement('div');
+            trail.className = 'laser-trail';
+            trail.style.left = x + 'px';
+            trail.style.top = y + 'px';
+            document.body.appendChild(trail);
+            setTimeout(() => { trail.remove(); }, 500);
+        }
+
+        document.addEventListener('mouseleave', () => { laserCursor.style.opacity = '0'; });
+        document.addEventListener('mouseenter', () => { laserCursor.style.opacity = '1'; });
+    </script>
+</body>
+
+</html>
