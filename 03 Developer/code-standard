@@ -1,0 +1,1310 @@
+# Code Standard & Architecture Guidelines
+
+## สารบัญ
+1. [ภาพรวมสถาปัตยกรรม](#ภาพรวมสถาปัตยกรรม)
+2. [Folder Structure](#folder-structure)
+3. [Layer Structure](#layer-structure)
+4. [Variable Declaration Patterns](#variable-declaration-patterns)
+5. [Access Modifiers](#access-modifiers)
+6. [Constants & Enums](#constants--enums)
+7. [API Response Standard](#api-response-standard)
+8. [Naming Conventions](#naming-conventions)
+9. [Best Practices](#best-practices)
+10. [Dependency Flow](#dependency-flow)
+11. [Sequence Diagram - Request Flow](#sequence-diagram---request-flow)
+
+---
+
+## ภาพรวมสถาปัตยกรรม
+
+โปรเจคนี้ใช้ **Layered Architecture Pattern** แบบ Clean Architecture ที่แยก concerns ออกเป็นชั้นต่างๆ เพื่อให้โค้ดมีความยืดหยุน บำรุงรักษาง่าย และทดสอบได้
+
+```mermaid
+block-beta
+    columns 1
+    block:presentation["🌐 Presentation Layer"]
+        Controllers["Controllers"]
+    end
+    space
+    block:business["⚙️ Business Logic Layer"]
+        Services["Services"] Interfaces["Interfaces"]
+    end
+    space
+    block:data["💾 Data Access Layer"]
+        Repositories["Repositories"] DBContext["DBContext"]
+    end
+    space
+    block:models["📦 Shared"]
+        Models["Models / DTOs"] Helpers["Helpers / Common"]
+    end
+    space
+    block:db["🗄️ Database"]
+        Database[("SQL Server / Oracle")]
+    end
+
+    Controllers --> Services
+    Services --> Repositories
+    Repositories --> Database
+
+    style presentation fill:#4A90D9,color:#fff
+    style business fill:#7B68EE,color:#fff
+    style data fill:#E67E22,color:#fff
+    style models fill:#27AE60,color:#fff
+    style db fill:#95A5A6,color:#fff
+```
+
+---
+
+## Folder Structure
+
+```mermaid
+graph LR
+    Root["📁 src/ProjectName"] --> Controllers["📂 Controllers"]
+    Root --> Services["📂 Services"]
+    Root --> Models["📂 Models"]
+    Root --> DataAccess["📂 DataAccess"]
+    Root --> Common["📂 Common"]
+    Root --> Helper["📂 Helper"]
+
+    Controllers --> SubCtrl1["AppointController.cs"]
+    Controllers --> SubCtrl2["AuthController.cs"]
+    Controllers --> SubCtrlN["...Controller.cs"]
+
+    Services --> SvcInt["📂 Interfaces"]
+    Services --> Svc1["AppointService.cs"]
+    SvcInt --> ISvc1["IAppointService.cs"]
+
+    Models --> Entities["📂 Entities"]
+    Models --> Requests["📂 Requests"]
+    Models --> Responses["📂 Responses"]
+    Models --> Enums["📂 Enums"]
+    Models --> Constants["📂 Constants"]
+
+    DataAccess --> DAInt["📂 Interfaces"]
+    DataAccess --> DBCtx["📂 DBContext"]
+    DataAccess --> Repo1["AppointRepository.cs"]
+    DAInt --> IRepo1["IAppointRepository.cs"]
+
+    Common --> CInt["📂 Interfaces"]
+    Common --> Ext["📂 Extensions"]
+    Common --> Exc["📂 Exceptions"]
+    Common --> Mid["📂 Middleware"]
+
+    Helper --> Hvc1["MemcachedService.cs"]
+    Helper --> HInt["📂 Interfaces"]
+
+    style Root fill:#2C3E50,color:#fff
+    style Controllers fill:#3498DB,color:#fff
+    style Services fill:#9B59B6,color:#fff
+    style Models fill:#27AE60,color:#fff
+    style DataAccess fill:#E67E22,color:#fff
+    style Common fill:#1ABC9C,color:#fff
+    style Helper fill:#F39C12,color:#fff
+```
+
+---
+
+## Layer Structure
+
+### 1. **Controllers Layer** (Presentation Layer)
+**Location:** `Controllers/`
+
+**หน้าที่:**
+- รับ HTTP Request จาก Client
+- Validate Request Data (Basic Validation)
+- เรียกใช้ Service Layer
+- Return HTTP Response
+- Handle Error และ Status Code
+
+**กฎการใช้งาน:**
+- ❌ ห้ามมี Business Logic
+- ❌ ห้ามเข้าถึง Database โดยตรง
+- ✅ ควรมีความบางเบา (Thin Controller)
+- ✅ ใช้ Dependency Injection สำหรับ Services
+
+**ตัวอย่าง:**
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class AppointController : ControllerBase
+{
+    private readonly IAppointService _appointService;
+    
+    public AppointController(IAppointService appointService)
+    {
+        _appointService = appointService;
+    }
+    
+    [HttpPost]
+    public async Task<IActionResult> CreateAppoint([FromBody] AppointRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+            
+        var result = await _appointService.CreateAppointAsync(request);
+        return Ok(result);
+    }
+}
+```
+
+**Naming Convention:**
+- ชื่อไฟล์: `{EntityName}Controller.cs`
+- ชื่อ Class: `{EntityName}Controller`
+- ชื่อ Method: `{Action}{EntityName}` (เช่น GetAppoint, CreateAppoint)
+
+---
+
+### 2. **Interfaces Layer** (Contracts)
+**Location:** `Common/Interfaces/`, `Services/Interfaces/`, `DataAccess/Interfaces/`
+
+**หน้าที่:**
+- กำหนด Contract สำหรับ Services และ Repositories
+- สนับสนุน Dependency Injection
+- ทำให้ง่ายต่อการทำ Unit Testing (Mocking)
+
+**กฎการใช้งาน:**
+- ✅ แยก Interface ออกจาก Implementation
+- ✅ ตั้งชื่อขึ้นต้นด้วย I (Interface)
+- ✅ ควรมี Single Responsibility
+
+**ตัวอย่าง:**
+```csharp
+// Services/Interfaces/IAppointService.cs
+public interface IAppointService
+{
+    Task<AppointResponse> CreateAppointAsync(AppointRequest request);
+    Task<AppointResponse> GetAppointByIdAsync(string appointId);
+    Task<bool> CancelAppointAsync(string appointId);
+}
+
+// DataAccess/Interfaces/IAppointRepository.cs
+public interface IAppointRepository
+{
+    Task<Appoint> InsertAsync(Appoint appoint);
+    Task<Appoint> GetByIdAsync(string id);
+    Task<bool> UpdateAsync(Appoint appoint);
+}
+```
+
+**Naming Convention:**
+- ชื่อไฟล์: `I{ServiceName}.cs` หรือ `I{RepositoryName}.cs`
+- ชื่อ Interface: `I{ServiceName}` หรือ `I{RepositoryName}`
+
+---
+
+### 3. **Services Layer** (Business Logic Layer)
+**Location:** `Services/`
+
+**หน้าที่:**
+- ประมวลผล Business Logic
+- Validate Business Rules
+- Orchestrate การเรียกใช้ Repository
+- Transform Data ระหว่าง Models
+- Handle Business Exceptions
+
+**กฎการใช้งาน:**
+- ✅ มี Business Logic หลักของระบบ
+- ✅ ใช้ Repository Pattern เพื่อเข้าถึงข้อมูล
+- ✅ ควร Implement Interface
+- ❌ ห้ามเข้าถึง Database โดยตรง
+- ✅ ควรมี Transaction Management
+
+**ตัวอย่าง:**
+```csharp
+public class AppointService : IAppointService
+{
+    private readonly IAppointRepository _appointRepository;
+    private readonly ICustomerRepository _customerRepository;
+    private readonly ILogger<AppointService> _logger;
+    
+    public AppointService(
+        IAppointRepository appointRepository,
+        ICustomerRepository customerRepository,
+        ILogger<AppointService> logger)
+    {
+        _appointRepository = appointRepository;
+        _customerRepository = customerRepository;
+        _logger = logger;
+    }
+    
+    public async Task<AppointResponse> CreateAppointAsync(AppointRequest request)
+    {
+        // Business Validation
+        var customer = await _customerRepository.GetByIdAsync(request.CustomerId);
+        if (customer == null)
+            throw new BusinessException("Customer not found");
+            
+        // Business Logic
+        var appoint = new Appoint
+        {
+            Id = Guid.NewGuid().ToString(),
+            CustomerId = request.CustomerId,
+            AppointDate = request.AppointDate,
+            Status = "Pending"
+        };
+        
+        // Save to Database
+        var result = await _appointRepository.InsertAsync(appoint);
+        
+        // Transform to Response
+        return MapToResponse(result);
+    }
+}
+```
+
+**Naming Convention:**
+- ชื่อไฟล์: `{EntityName}Service.cs`
+- ชื่อ Class: `{EntityName}Service`
+- ชื่อ Method: `{Action}{EntityName}Async` (Async Methods)
+
+---
+
+### 4. **Entity/Models Layer** (Domain Models)
+**Location:** `Models/`
+
+**หน้าที่:**
+- กำหนด Data Structure
+- Data Transfer Objects (DTOs)
+- Domain Entities
+- Request/Response Models
+
+**ประเภทของ Models:**
+
+#### 4.1 **Entity Models** (Domain Models)
+```csharp
+// Models/Entities/Appoint.cs
+public class Appoint
+{
+    public string Id { get; set; }
+    public string CustomerId { get; set; }
+    public DateTime AppointDate { get; set; }
+    public string BranchCode { get; set; }
+    public string Status { get; set; }
+    public DateTime CreatedDate { get; set; }
+    public string CreatedBy { get; set; }
+}
+```
+
+#### 4.2 **Request Models** (DTOs)
+```csharp
+// Models/Requests/AppointRequest.cs
+public class AppointRequest
+{
+    [Required]
+    public string CustomerId { get; set; }
+    
+    [Required]
+    public DateTime AppointDate { get; set; }
+    
+    [Required]
+    public string BranchCode { get; set; }
+}
+```
+
+#### 4.3 **Response Models** (DTOs)
+```csharp
+// Models/Responses/AppointResponse.cs
+public class AppointResponse
+{
+    public string Id { get; set; }
+    public string CustomerId { get; set; }
+    public DateTime AppointDate { get; set; }
+    public string BranchCode { get; set; }
+    public string Status { get; set; }
+}
+```
+
+**Naming Convention:**
+- Entity: `{EntityName}.cs`
+- Request: `{EntityName}Request.cs` หรือ `Create{EntityName}Request.cs`
+- Response: `{EntityName}Response.cs`
+
+---
+
+### 5. **Data Access Layer** (Repository Pattern)
+**Location:** `DataAccess/`
+
+**หน้าที่:**
+- เข้าถึง Database
+- CRUD Operations
+- Query ข้อมูล
+- Transaction Management
+
+**โครงสร้าง:**
+```
+DataAccess/
+├── DBContext/
+│   └── ApplicationDbContext.cs
+├── Repositories/
+│   ├── AppointRepository.cs
+│   └── CustomerRepository.cs
+└── Interfaces/
+    ├── IAppointRepository.cs
+    └── ICustomerRepository.cs
+```
+
+**ตัวอย่าง Repository:**
+```csharp
+public class AppointRepository : IAppointRepository
+{
+    private readonly ApplicationDbContext _context;
+    
+    public AppointRepository(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+    
+    public async Task<Appoint> InsertAsync(Appoint appoint)
+    {
+        await _context.Appoints.AddAsync(appoint);
+        await _context.SaveChangesAsync();
+        return appoint;
+    }
+    
+    public async Task<Appoint> GetByIdAsync(string id)
+    {
+        return await _context.Appoints
+            .FirstOrDefaultAsync(x => x.Id == id);
+    }
+    
+    public async Task<bool> UpdateAsync(Appoint appoint)
+    {
+        _context.Appoints.Update(appoint);
+        return await _context.SaveChangesAsync() > 0;
+    }
+}
+```
+
+**กฎการใช้งาน:**
+- ✅ ใช้ Entity Framework Core หรือ Dapper
+- ✅ Implement Interface
+- ✅ Handle Database Exceptions
+- ❌ ห้ามมี Business Logic
+- ✅ ควรใช้ Async/Await
+
+**Naming Convention:**
+- ชื่อไฟล์: `{EntityName}Repository.cs`
+- ชื่อ Class: `{EntityName}Repository`
+
+---
+
+### 6. **Database Context Layer**
+**Location:** `DataAccess/DBContext/`
+
+**หน้าที่:**
+- กำหนด DbContext สำหรับ Entity Framework
+- Configuration ของ Database Connection
+- Entity Configurations
+
+**ตัวอย่าง:**
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
+    {
+    }
+    
+    public DbSet<Appoint> Appoints { get; set; }
+    public DbSet<Customer> Customers { get; set; }
+    public DbSet<Branch> Branches { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        
+        // Entity Configurations
+        modelBuilder.Entity<Appoint>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.Status).HasMaxLength(20);
+        });
+    }
+}
+```
+
+---
+
+### 7. **Helper/Common Layer**
+**Location:** `Helper/`, `Common/`
+
+**หน้าที่:**
+- Utility Functions
+- Extension Methods
+- Common Services (Caching, Logging, Encryption)
+- Middleware
+
+**ตัวอย่าง:**
+```csharp
+// Common/Extensions/StringExtensions.cs
+public static class StringExtensions
+{
+    public static bool IsNullOrEmpty(this string value)
+    {
+        return string.IsNullOrWhiteSpace(value);
+    }
+}
+
+// Helper/MemcachedService.cs
+public class MemcachedService : IMemcachedService
+{
+    public async Task<T> GetAsync<T>(string key)
+    {
+        // Implementation
+    }
+}
+```
+
+---
+
+## Variable Declaration Patterns
+
+### 1. **Private Fields** (Dependency Injection)
+ใช้ `private readonly` สำหรับ fields ที่ inject ผ่าน Constructor
+
+```csharp
+public class AppointService : IAppointService
+{
+    // ✅ ถูกต้อง - ใช้ underscore prefix + readonly
+    private readonly IAppointRepository _appointRepository;
+    private readonly ILogger<AppointService> _logger;
+    private readonly IOptions<ConfigureService> _config;
+
+    // ❌ ไม่ถูกต้อง
+    private IAppointRepository appointRepository;   // ขาด underscore, ขาด readonly
+    public IAppointRepository _appointRepository;    // ไม่ควรเป็น public
+}
+```
+
+### 2. **Local Variables**
+ใช้ `var` เมื่อ type ชัดเจนจากฝั่งขวา ใช้ explicit type เมื่อ type ไม่ชัดเจน
+
+```csharp
+public async Task<AppointResponse> CreateAppointAsync(AppointRequest request)
+{
+    // ✅ ใช้ var - type ชัดเจนจากฝั่งขวา
+    var appoint = new Appoint();
+    var customers = new List<Customer>();
+    var appointId = Guid.NewGuid().ToString();
+
+    // ✅ ใช้ explicit type - type ไม่ชัดเจนจากฝั่งขวา
+    AppointResponse result = await _service.GetAppointAsync(id);
+    int retryCount = GetRetryCount();
+
+    // ❌ ไม่ถูกต้อง
+    var x = GetSomething();        // ชื่อไม่สื่อความหมาย
+    var a = 1;                     // ใช้ explicit type จะชัดเจนกว่า
+    string s = "hello";            // ใช้ var ได้เพราะ type ชัดเจน
+}
+```
+
+### 3. **Constants**
+ใช้ `const` สำหรับค่าคงที่ compile-time, ใช้ `static readonly` สำหรับค่าคงที่ runtime
+
+```csharp
+public class AppConstants
+{
+    // ✅ const - ค่าคงที่ที่รู้ตอน compile-time
+    public const string DefaultStatus = "Pending";
+    public const int MaxRetryCount = 3;
+    public const string DateFormat = "yyyy-MM-dd";
+
+    // ✅ static readonly - ค่าคงที่ที่ต้องคำนวณตอน runtime
+    public static readonly DateTime MinDate = new DateTime(2020, 1, 1);
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+}
+```
+
+### 4. **Properties**
+```csharp
+public class Appoint
+{
+    // ✅ Auto-Property
+    public string Id { get; set; }
+    public string CustomerId { get; set; }
+
+    // ✅ Read-only Property (immutable)
+    public string AppointCode { get; init; }
+
+    // ✅ Computed Property
+    public string FullName => $"{FirstName} {LastName}";
+
+    // ✅ Property with default value
+    public string Status { get; set; } = "Pending";
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
+    // ✅ Nullable Property
+    public string? Remark { get; set; }
+    public DateTime? CancelledDate { get; set; }
+}
+```
+
+### 5. **Collection Initialization**
+```csharp
+// ✅ ถูกต้อง
+var items = new List<Appoint>();
+var dict = new Dictionary<string, string>();
+var ids = new[] { "A001", "A002", "A003" };
+
+// ✅ Empty collections (ไม่ return null)
+return new List<Appoint>();            // แทน return null
+return Enumerable.Empty<Appoint>();    // lightweight empty
+return Array.Empty<string>();          // empty array
+```
+
+### 6. **Null Handling Patterns**
+```csharp
+// ✅ Null-conditional operator
+var name = customer?.FirstName;
+var count = items?.Count ?? 0;
+
+// ✅ Null coalescing
+var status = input ?? "Default";
+var config = _config ?? throw new ArgumentNullException(nameof(_config));
+
+// ✅ Pattern matching null check
+if (customer is null)
+    throw new BusinessException("Customer not found");
+
+if (customer is not null)
+    await ProcessCustomerAsync(customer);
+
+// ❌ ไม่ถูกต้อง
+if (customer == null)    // ใช้ is null แทน (ปลอดภัยกว่า)
+if (name != null && name != "")  // ใช้ !string.IsNullOrEmpty(name)
+```
+
+### Pattern Summary
+
+```mermaid
+graph TD
+    A["Variable Declaration"] --> B{"ประเภท?"}
+    B --> C["Injected Dependency"]
+    B --> D["Local Variable"]
+    B --> E["Constant"]
+    B --> F["Property"]
+
+    C --> C1["private readonly IService _service"]
+    D --> D1{"Type ชัดเจน?"}
+    D1 -->|Yes| D2["var result = new List()"]
+    D1 -->|No| D3["AppointResponse result = GetResult()"]
+    E --> E1{"Compile-time?"}
+    E1 -->|Yes| E2["const string Name = 'value'"]
+    E1 -->|No| E3["static readonly TimeSpan Timeout"]
+    F --> F1["public string Name { get; set; }"]
+
+    style A fill:#2C3E50,color:#fff
+    style C1 fill:#3498DB,color:#fff
+    style D2 fill:#27AE60,color:#fff
+    style D3 fill:#27AE60,color:#fff
+    style E2 fill:#E67E22,color:#fff
+    style E3 fill:#E67E22,color:#fff
+    style F1 fill:#9B59B6,color:#fff
+```
+
+---
+
+## Access Modifiers
+
+### กฎการใช้ Access Modifiers
+
+| Modifier | ใช้กับ | เมื่อไหร่ |
+|----------|--------|----------|
+| `public` | Class, Interface, Property, Method | API ที่ต้องการ expose ออกไปภายนอก |
+| `private` | Field, Method | ใช้ภายใน Class เท่านั้น |
+| `protected` | Field, Method, Property | ให้ Subclass เข้าถึงได้ |
+| `internal` | Class, Method | ใช้ภายใน Assembly/Project เดียวกัน |
+| `private readonly` | Field | Injected dependencies, ค่าที่กำหนดครั้งเดียว |
+
+### ตัวอย่าง
+```csharp
+public class AppointService : IAppointService
+{
+    // private readonly - injected dependencies
+    private readonly IAppointRepository _appointRepository;
+    private readonly ILogger<AppointService> _logger;
+
+    // private - internal helper
+    private AppointResponse MapToResponse(Appoint entity) { ... }
+
+    // public - exposed via interface
+    public async Task<AppointResponse> GetAppointAsync(string id) { ... }
+
+    // protected - สำหรับ override ใน subclass
+    protected virtual void ValidateAppoint(Appoint appoint) { ... }
+}
+```
+
+### ลำดับการเขียนใน Class
+
+```mermaid
+graph TD
+    A["📄 Class Structure"] --> B["1️⃣ Constants / Static Fields"]
+    B --> C["2️⃣ Private Fields"]
+    C --> D["3️⃣ Constructor"]
+    D --> E["4️⃣ Public Properties"]
+    E --> F["5️⃣ Public Methods"]
+    F --> G["6️⃣ Private Methods"]
+
+    style A fill:#2C3E50,color:#fff
+    style B fill:#E74C3C,color:#fff
+    style C fill:#E67E22,color:#fff
+    style D fill:#F1C40F,color:#333
+    style E fill:#27AE60,color:#fff
+    style F fill:#3498DB,color:#fff
+    style G fill:#9B59B6,color:#fff
+```
+
+```csharp
+public class AppointService : IAppointService
+{
+    // ── 1. Constants / Static ──
+    private const string DefaultStatus = "Pending";
+
+    // ── 2. Private Fields ──
+    private readonly IAppointRepository _appointRepository;
+    private readonly ILogger<AppointService> _logger;
+
+    // ── 3. Constructor ──
+    public AppointService(
+        IAppointRepository appointRepository,
+        ILogger<AppointService> logger)
+    {
+        _appointRepository = appointRepository;
+        _logger = logger;
+    }
+
+    // ── 4. Public Properties ──
+    public string ServiceName => nameof(AppointService);
+
+    // ── 5. Public Methods (Interface Implementation) ──
+    public async Task<AppointResponse> CreateAppointAsync(AppointRequest request)
+    {
+        _logger.LogInformation("Creating appoint...");
+        var entity = MapToEntity(request);
+        var result = await _appointRepository.InsertAsync(entity);
+        return MapToResponse(result);
+    }
+
+    // ── 6. Private Methods ──
+    private Appoint MapToEntity(AppointRequest request) { ... }
+    private AppointResponse MapToResponse(Appoint entity) { ... }
+}
+```
+
+---
+
+## Constants & Enums
+
+### Enum Pattern
+ใช้ Enum สำหรับค่าที่มีจำนวนจำกัดและแน่นอน
+
+```csharp
+// Models/Enums/AppointStatus.cs
+public enum AppointStatus
+{
+    Pending = 0,
+    Confirmed = 1,
+    InProgress = 2,
+    Completed = 3,
+    Cancelled = 4
+}
+
+// Models/Enums/TransactionType.cs
+public enum TransactionType
+{
+    Deposit = 1,
+    Withdraw = 2,
+    Transfer = 3
+}
+
+// ใช้งาน
+public class Appoint
+{
+    public AppointStatus Status { get; set; } = AppointStatus.Pending;
+}
+```
+
+### Constants Pattern
+รวบรวม Constants ไว้ในที่เดียว แยกตามหมวดหมู่
+
+```csharp
+// Models/Constants/AppConstants.cs
+public static class AppConstants
+{
+    public const string ApplicationName = "OmniChannelServiceAPI";
+    public const string DefaultDateFormat = "yyyy-MM-dd HH:mm:ss";
+}
+
+// Models/Constants/CacheKeys.cs
+public static class CacheKeys
+{
+    public const string BranchList = "BRANCH_LIST";
+    public const string ProvinceList = "PROVINCE_LIST";
+    public static string CustomerById(string id) => $"CUSTOMER_{id}";
+}
+
+// Models/Constants/ErrorCodes.cs
+public static class ErrorCodes
+{
+    public const string NotFound = "ERR_NOT_FOUND";
+    public const string InvalidInput = "ERR_INVALID_INPUT";
+    public const string Unauthorized = "ERR_UNAUTHORIZED";
+    public const string InternalError = "ERR_INTERNAL";
+}
+
+// Models/Constants/ApiMessages.cs
+public static class ApiMessages
+{
+    public const string Success = "Success";
+    public const string NotFound = "Data not found";
+    public const string InvalidRequest = "Invalid request data";
+}
+```
+
+```mermaid
+graph LR
+    A["📂 Models"] --> B["📂 Constants"]
+    A --> C["📂 Enums"]
+
+    B --> B1["AppConstants.cs"]
+    B --> B2["CacheKeys.cs"]
+    B --> B3["ErrorCodes.cs"]
+    B --> B4["ApiMessages.cs"]
+
+    C --> C1["AppointStatus.cs"]
+    C --> C2["TransactionType.cs"]
+    C --> C3["UserRole.cs"]
+
+    style A fill:#2C3E50,color:#fff
+    style B fill:#E67E22,color:#fff
+    style C fill:#27AE60,color:#fff
+```
+
+---
+
+## API Response Standard
+
+### Standard Response Model
+ทุก API ควร Return Response ในรูปแบบเดียวกัน
+
+```csharp
+// Models/Responses/ApiResponse.cs
+public class ApiResponse<T>
+{
+    public string Code { get; set; }
+    public string Message { get; set; }
+    public T Data { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    public static ApiResponse<T> SuccessResponse(T data, string message = "Success")
+    {
+        return new ApiResponse<T>
+        {
+            Code = "200",
+            Message = message,
+            Data = data
+        };
+    }
+
+    public static ApiResponse<T> ErrorResponse(string code, string message)
+    {
+        return new ApiResponse<T>
+        {
+            Code = code,
+            Message = message,
+            Data = default
+        };
+    }
+}
+```
+
+### Response Examples
+```json
+// ✅ Success Response
+{
+    "code": "200",
+    "message": "Success",
+    "data": {
+        "id": "APT-001",
+        "customerId": "C001",
+        "status": "Confirmed"
+    },
+    "timestamp": "2026-02-27T10:30:00Z"
+}
+
+// ✅ Error Response
+{
+    "code": "ERR_NOT_FOUND",
+    "message": "Appointment not found",
+    "data": null,
+    "timestamp": "2026-02-27T10:30:00Z"
+}
+
+// ✅ List Response
+{
+    "code": "200",
+    "message": "Success",
+    "data": {
+        "items": [...],
+        "totalCount": 100,
+        "page": 1,
+        "pageSize": 20
+    },
+    "timestamp": "2026-02-27T10:30:00Z"
+}
+```
+
+### HTTP Status Code Standard
+
+| Status Code | ใช้เมื่อ | ตัวอย่าง |
+|-------------|---------|----------|
+| `200 OK` | Request สำเร็จ | GET, PUT |
+| `201 Created` | สร้างข้อมูลใหม่สำเร็จ | POST |
+| `204 No Content` | สำเร็จแต่ไม่มีข้อมูล return | DELETE |
+| `400 Bad Request` | Request ไม่ถูกต้อง | Validation failed |
+| `401 Unauthorized` | ไม่มีสิทธิ์เข้าถึง | Token หมดอายุ |
+| `403 Forbidden` | ไม่มี Permission | Role ไม่อนุญาต |
+| `404 Not Found` | ไม่พบข้อมูล | Resource ไม่มีอยู่ |
+| `500 Internal Error` | Server Error | Exception |
+
+---
+
+## Naming Conventions
+
+### File & Class Names
+| ประเภท | รูปแบบ | ตัวอย่าง |
+|--------|--------|----------|
+| Controller | `{Entity}Controller.cs` | `AppointController.cs` |
+| Service | `{Entity}Service.cs` | `AppointService.cs` |
+| Interface | `I{Entity}Service.cs` | `IAppointService.cs` |
+| Repository | `{Entity}Repository.cs` | `AppointRepository.cs` |
+| Entity | `{Entity}.cs` | `Appoint.cs` |
+| Request Model | `{Entity}Request.cs` | `AppointRequest.cs` |
+| Response Model | `{Entity}Response.cs` | `AppointResponse.cs` |
+
+### Method Names
+- Controllers: `{HttpMethod}{EntityName}` → `GetAppoint`, `CreateAppoint`
+- Services: `{Action}{EntityName}Async` → `CreateAppointAsync`, `GetAppointByIdAsync`
+- Repositories: `{Action}Async` → `InsertAsync`, `GetByIdAsync`, `UpdateAsync`
+
+### Variable Names
+- Private fields: `_camelCase` → `_appointService`, `_logger`
+- Parameters: `camelCase` → `appointId`, `customerId`
+- Properties: `PascalCase` → `CustomerId`, `AppointDate`
+
+---
+
+## Best Practices
+
+### 1. **Dependency Injection**
+```csharp
+// Startup.cs หรือ Program.cs
+public void ConfigureServices(IServiceCollection services)
+{
+    // Repositories
+    services.AddScoped<IAppointRepository, AppointRepository>();
+    
+    // Services
+    services.AddScoped<IAppointService, AppointService>();
+    
+    // Helpers
+    services.AddSingleton<IMemcachedService, MemcachedService>();
+}
+```
+
+### 2. **Error Handling**
+```csharp
+// Common/Exceptions/BusinessException.cs
+public class BusinessException : Exception
+{
+    public string ErrorCode { get; set; }
+    
+    public BusinessException(string message, string errorCode = null) 
+        : base(message)
+    {
+        ErrorCode = errorCode;
+    }
+}
+
+// Middleware สำหรับจัดการ Error
+public class ErrorHandlingMiddleware
+{
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (BusinessException ex)
+        {
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new 
+            {
+                error = ex.Message,
+                errorCode = ex.ErrorCode
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception");
+            context.Response.StatusCode = 500;
+        }
+    }
+}
+```
+
+### 3. **Async/Await**
+- ✅ ใช้ Async/Await สำหรับ I/O Operations
+- ✅ ตั้งชื่อ method ลงท้ายด้วย `Async`
+- ✅ Return `Task<T>` หรือ `Task`
+
+### 4. **Logging**
+```csharp
+public class AppointService : IAppointService
+{
+    private readonly ILogger<AppointService> _logger;
+    
+    public async Task<AppointResponse> CreateAppointAsync(AppointRequest request)
+    {
+        _logger.LogInformation("Creating appoint for customer: {CustomerId}", 
+            request.CustomerId);
+        
+        try
+        {
+            // Logic here
+            _logger.LogInformation("Appoint created successfully: {AppointId}", 
+                result.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating appoint for customer: {CustomerId}", 
+                request.CustomerId);
+            throw;
+        }
+    }
+}
+```
+
+### 5. **Configuration Management**
+```csharp
+// Models/ConfigureService.cs
+public class ConfigureService
+{
+    public string DatabaseConnection { get; set; }
+    public string ApiKey { get; set; }
+    public int CacheExpiration { get; set; }
+}
+
+// Startup.cs
+services.Configure<ConfigureService>(
+    Configuration.GetSection("ConfigureService"));
+
+// ใช้งานใน Service
+public class AppointService
+{
+    private readonly ConfigureService _config;
+    
+    public AppointService(IOptions<ConfigureService> config)
+    {
+        _config = config.Value;
+    }
+}
+```
+
+### 6. **Testing Structure**
+```
+tests/
+└── UnitTest.OmniChannelServiceAPI/
+    ├── Controllers/
+    │   └── AppointControllerTests.cs
+    ├── Services/
+    │   └── AppointServiceTests.cs
+    └── Repositories/
+        └── AppointRepositoryTests.cs
+```
+
+---
+
+## ห้ามทำ (Don'ts)
+
+❌ **Controller เข้าถึง Database โดยตรง**
+```csharp
+// ❌ ไม่ถูกต้อง
+public class AppointController : ControllerBase
+{
+    private readonly DbContext _context;
+    
+    [HttpGet]
+    public IActionResult Get()
+    {
+        var data = _context.Appoints.ToList(); // ไม่ควรทำ
+        return Ok(data);
+    }
+}
+```
+
+❌ **Business Logic ใน Controller**
+```csharp
+// ❌ ไม่ถูกต้อง
+public class AppointController : ControllerBase
+{
+    [HttpPost]
+    public IActionResult Create(AppointRequest request)
+    {
+        // Business logic ไม่ควรอยู่ใน Controller
+        if (request.AppointDate < DateTime.Now)
+            return BadRequest("Invalid date");
+            
+        var appoint = new Appoint { /* ... */ };
+        // Save to database...
+    }
+}
+```
+
+❌ **Repository มี Business Logic**
+```csharp
+// ❌ ไม่ถูกต้อง
+public class AppointRepository
+{
+    public async Task<Appoint> InsertAsync(Appoint appoint)
+    {
+        // Business validation ไม่ควรอยู่ใน Repository
+        if (appoint.AppointDate < DateTime.Now)
+            throw new Exception("Invalid date");
+            
+        await _context.Appoints.AddAsync(appoint);
+    }
+}
+```
+
+---
+
+## Dependency Flow
+
+```mermaid
+flowchart TD
+    Client(["🌐 Client / Frontend"])
+
+    subgraph API["Presentation Layer"]
+        Controller["📡 Controller"]
+    end
+
+    subgraph BL["Business Logic Layer"]
+        IService["📋 IService\n(Interface)"]
+        Service["⚙️ Service\n(Implementation)"]
+    end
+
+    subgraph DAL["Data Access Layer"]
+        IRepo["📋 IRepository\n(Interface)"]
+        Repo["💾 Repository\n(Implementation)"]
+    end
+
+    subgraph Shared["Shared"]
+        Models["📦 Models / DTOs"]
+        Entities["🏷️ Entities"]
+    end
+
+    DB[("🗄️ Database")]
+
+    Client -->|HTTP Request| Controller
+    Controller -->|DI| IService
+    IService -.->|implements| Service
+    Service -->|DI| IRepo
+    Service -->|uses| Models
+    IRepo -.->|implements| Repo
+    Repo -->|query/command| DB
+    Repo -->|uses| Entities
+    Controller -->|uses| Models
+
+    style API fill:#3498DB,color:#fff
+    style BL fill:#9B59B6,color:#fff
+    style DAL fill:#E67E22,color:#fff
+    style Shared fill:#27AE60,color:#fff
+    style DB fill:#95A5A6,color:#fff
+    style Client fill:#2C3E50,color:#fff
+```
+
+**กฎ:**
+- แต่ละ Layer ควรพึ่งพา **Interface** ไม่ใช่ Concrete Class
+- Dependency ควรไหลในทิศทางเดียว (จากบนลงล่าง)
+- Layer ล่างไม่ควรรู้จัก Layer บน
+- ใช้ Dependency Injection Container ใน `Startup.cs` / `Program.cs`
+
+---
+
+## Sequence Diagram - Request Flow
+
+### Create Appointment Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as AppointController
+    participant Service as AppointService
+    participant Repo as AppointRepository
+    participant DB as Database
+
+    Client->>+Controller: POST /api/appoint
+    Note over Controller: Validate ModelState
+
+    Controller->>+Service: CreateAppointAsync(request)
+    Note over Service: Business Validation
+    Note over Service: Transform Request → Entity
+
+    Service->>+Repo: InsertAsync(appoint)
+    Repo->>+DB: INSERT INTO Appoints
+    DB-->>-Repo: Success
+    Repo-->>-Service: Appoint Entity
+
+    Note over Service: Transform Entity → Response
+    Service-->>-Controller: AppointResponse
+
+    Controller-->>-Client: 200 OK + JSON Response
+```
+
+### Get Appointment with Error Handling
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant MW as Middleware
+    participant Controller as AppointController
+    participant Service as AppointService
+    participant Cache as MemcachedService
+    participant Repo as AppointRepository
+    participant DB as Database
+
+    Client->>+MW: GET /api/appoint/{id}
+    MW->>+Controller: Authenticated Request
+
+    Controller->>+Service: GetAppointByIdAsync(id)
+
+    Service->>+Cache: GetAsync(key)
+    alt Cache Hit
+        Cache-->>Service: Cached Data
+    else Cache Miss
+        Cache-->>-Service: null
+        Service->>+Repo: GetByIdAsync(id)
+        Repo->>+DB: SELECT * FROM Appoints
+        DB-->>-Repo: Row Data
+        Repo-->>-Service: Appoint Entity
+    end
+
+    alt Found
+        Service-->>Controller: AppointResponse
+        Controller-->>Client: 200 OK
+    else Not Found
+        Service-->>-Controller: throw BusinessException
+        Controller-->>-MW: Exception
+        MW-->>-Client: 404 Not Found
+    end
+```
+
+---
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class ControllerBase {
+        <<abstract>>
+    }
+
+    class AppointController {
+        -IAppointService _appointService
+        +CreateAppoint(request) IActionResult
+        +GetAppoint(id) IActionResult
+        +CancelAppoint(id) IActionResult
+    }
+
+    class IAppointService {
+        <<interface>>
+        +CreateAppointAsync(request) Task~AppointResponse~
+        +GetAppointByIdAsync(id) Task~AppointResponse~
+        +CancelAppointAsync(id) Task~bool~
+    }
+
+    class AppointService {
+        -IAppointRepository _appointRepository
+        -ILogger _logger
+        +CreateAppointAsync(request) Task~AppointResponse~
+        +GetAppointByIdAsync(id) Task~AppointResponse~
+        +CancelAppointAsync(id) Task~bool~
+        -MapToEntity(request) Appoint
+        -MapToResponse(entity) AppointResponse
+    }
+
+    class IAppointRepository {
+        <<interface>>
+        +InsertAsync(entity) Task~Appoint~
+        +GetByIdAsync(id) Task~Appoint~
+        +UpdateAsync(entity) Task~bool~
+    }
+
+    class AppointRepository {
+        -ApplicationDbContext _context
+        +InsertAsync(entity) Task~Appoint~
+        +GetByIdAsync(id) Task~Appoint~
+        +UpdateAsync(entity) Task~bool~
+    }
+
+    class Appoint {
+        +string Id
+        +string CustomerId
+        +DateTime AppointDate
+        +AppointStatus Status
+        +DateTime CreatedDate
+    }
+
+    class AppointRequest {
+        +string CustomerId
+        +DateTime AppointDate
+        +string BranchCode
+    }
+
+    class AppointResponse {
+        +string Id
+        +string CustomerId
+        +DateTime AppointDate
+        +string Status
+    }
+
+    class AppointStatus {
+        <<enumeration>>
+        Pending
+        Confirmed
+        InProgress
+        Completed
+        Cancelled
+    }
+
+    ControllerBase <|-- AppointController
+    AppointController --> IAppointService : uses
+    IAppointService <|.. AppointService : implements
+    AppointService --> IAppointRepository : uses
+    IAppointRepository <|.. AppointRepository : implements
+    AppointService --> Appoint : creates
+    AppointService --> AppointRequest : receives
+    AppointService --> AppointResponse : returns
+    Appoint --> AppointStatus : has
+```
+
+---
+
+## สรุป
+
+การจัดวาง Layer ตาม Standard นี้จะช่วยให้:
+- ✅ โค้ดอ่านง่าย เข้าใจง่าย
+- ✅ แยก Concerns ชัดเจน
+- ✅ ทดสอบง่าย (Testable)
+- ✅ บำรุงรักษาง่าย (Maintainable)
+- ✅ ขยายระบบได้ง่าย (Scalable)
+- ✅ ทำงานเป็นทีมได้ดีขึ้น
+
+---
+
+**เอกสารนี้อัพเดทล่าสุด:** 27 กุมภาพันธ์ 2026
